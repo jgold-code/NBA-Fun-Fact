@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NBA History - On This Day</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b35, #f7931e, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ccc;
+            margin-bottom: 30px;
+        }
+
+        .date-display {
+            font-size: 1.5rem;
+            color: #ffd700;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+
+        .fact-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 30px 0;
+            border-left: 4px solid #ff6b35;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fact-text {
+            font-size: 1.3rem;
+            line-height: 1.6;
+            color: #f0f0f0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .date-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 10px 15px;
+            color: white;
+            font-size: 1rem;
+            margin: 0 10px;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: #ff6b35;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .fact-text {
+                font-size: 1.1rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏀 NBA History</h1>
+        <p class="subtitle">On This Day in Basketball</p>
+        
+        <div class="date-display" id="currentDate"></div>
+        
+        <div class="fact-container">
+            <p class="fact-text" id="factText">Loading your NBA fact...</p>
+        </div>
+        
+        <div class="controls">
+            <button onclick="showTodaysFact()">Today's Fact</button>
+            <button onclick="getRandomFact()">Random Fact</button>
+            <input type="date" class="date-input" id="dateInput" onchange="showFactForSelectedDate()">
+        </div>
+    </div>
+
+    <script>
+        // NBA Historical Facts Database
+        const nbaFacts = {
+            "1-1": "On January 1, 1947, the Toronto Huskies hosted the New York Knicks in the first game ever played in the Basketball Association of America (BAA), which later became the NBA.",
+            
+            "1-15": "On January 15, 1992, Magic Johnson made his comeback to the NBA All-Star Game, earning MVP honors in an emotional return after announcing his HIV-positive status.",
+            
+            "2-14": "On February 14, 2006, Kobe Bryant scored 81 points against the Toronto Raptors - the second-highest single-game scoring performance in NBA history.",
+            
+            "3-2": "On March 2, 1962, Wilt Chamberlain scored 100 points for the Philadelphia Warriors against the New York Knicks in Hershey, Pennsylvania - the only 100-point game in NBA history.",
+            
+            "3-28": "On March 28, 1990, Scottie Pippen recorded the first quadruple-double since 1986, posting 23 points, 12 rebounds, 10 assists, and 10 steals against the Milwaukee Bucks.",
+            
+            "4-16": "On April 16, 1947, the Philadelphia Warriors defeated the Chicago Stags 4 games to 1 to win the first-ever BAA Championship (the predecessor to the NBA).",
+            
+            "5-7": "On May 7, 1989, Michael Jordan hit 'The Shot' - a series-winning buzzer-beater over Craig Ehlo to eliminate the Cleveland Cavaliers in Game 5 of the first round.",
+            
+            "6-14": "On June 14, 1998, Michael Jordan hit his final shot as a Chicago Bull - the game-winner in Game 6 of the Finals against Utah, securing his sixth championship.",
+            
+            "6-19": "On June 19, 2016, LeBron James led the Cleveland Cavaliers to their first NBA championship, ending the city's 52-year championship drought.",
+            
+            "7-4": "On July 4, 2016, Kevin Durant shocked the basketball world by announcing he would join the Golden State Warriors as a free agent.",
+            
+            "8-24": "August 24th was Kobe Bryant's jersey number (24) and also his birthday month and day when reversed (8/24). He wore both #8 and #24 during his Lakers career.",
+            
+            "9-25": "On September 25, 1999, Michael Jordan announced his second retirement from basketball, this time as a member of the Washington Wizards.",
+            
+            "10-29": "On October 29, 1969, Lew Alcindor (later Kareem Abdul-Jabbar) made his NBA debut with the Milwaukee Bucks, beginning a legendary 20-year career.",
+            
+            "11-1": "On November 1, 1946, the New York Knicks defeated the Toronto Huskies 68-66 in the inaugural game of the Basketball Association of America at Maple Leaf Gardens.",
+            
+            "12-13": "On December 13, 1983, the Detroit Pistons defeated the Denver Nuggets 186-184 in triple overtime - the highest-scoring game in NBA history with 370 total points.",
+            
+            // Add more facts for different dates
+            "1-26": "On January 26, 2020, basketball legend Kobe Bryant, his daughter Gianna, and seven others tragically lost their lives in a helicopter crash in Calabasas, California.",
+            
+            "2-11": "On February 11, 2006, the NBA All-Star Game was held in Houston, where LeBron James won his first All-Star Game MVP award.",
+            
+            "3-13": "On March 13, 2020, the NBA suspended its season due to COVID-19 after Utah Jazz center Rudy Gobert tested positive for the virus.",
+            
+            "4-20": "On April 20, 1986, Michael Jordan scored 63 points against the Boston Celtics in a playoff game, which Larry Bird called 'God disguised as Michael Jordan.'",
+            
+            "5-27": "On May 27, 1987, Larry Bird stole Isiah Thomas's inbound pass and fed Dennis Johnson for the game-winning layup in Game 5 of the Eastern Conference Finals.",
+            
+            "6-12": "On June 12, 1991, Michael Jordan won his first NBA championship, defeating Magic Johnson's Lakers 4 games to 1 in the Finals.",
+            
+            "7-1": "On July 1, 2010, 'The Decision' aired on ESPN as LeBron James announced he would join the Miami Heat, forming a superteam with Dwyane Wade and Chris Bosh.",
+            
+            "8-23": "On August 23, 2003, Kobe Bryant was arrested on sexual assault charges in Colorado, beginning one of the most controversial periods in NBA history.",
+            
+            "9-11": "On September 11, 2001, NBA games were postponed like all other major sporting events following the tragic terrorist attacks in the United States.",
+            
+            "10-12": "On October 12, 2010, the Miami Heat's 'Big Three' of LeBron James, Dwyane Wade, and Chris Bosh played their first game together.",
+            
+            "11-9": "On November 9, 1991, Magic Johnson shocked the world by announcing his retirement due to HIV, ending one of the greatest careers in NBA history.",
+            
+            "12-25": "The NBA traditionally plays games on Christmas Day, making it one of the most anticipated days of the basketball calendar with marquee matchups."
+        };
+
+        function formatDate(date) {
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function getDateKey(date) {
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            return `${month}-${day}`;
+        }
+
+        function showFactForDate(date = new Date()) {
+            const dateKey = getDateKey(date);
+            const fact = nbaFacts[dateKey];
+            
+            document.getElementById('currentDate').textContent = formatDate(date);
+            
+            if (fact) {
+                document.getElementById('factText').textContent = fact;
+            } else {
+                document.getElementById('factText').textContent = 
+                    `On ${formatDate(date)}, while no major NBA event is recorded in our database, remember that every day in basketball history has contributed to the beautiful game we love today! 🏀`;
+            }
+        }
+
+        function showTodaysFact() {
+            const today = new Date();
+            showFactForDate(today);
+            document.getElementById('dateInput').valueAsDate = today;
+        }
+
+        function getRandomFact() {
+            const factKeys = Object.keys(nbaFacts);
+            const randomKey = factKeys[Math.floor(Math.random() * factKeys.length)];
+            const [month, day] = randomKey.split('-').map(Number);
+            const randomDate = new Date(2024, month - 1, day); // Using 2024 as base year
+            
+            showFactForDate(randomDate);
+            document.getElementById('dateInput').valueAsDate = randomDate;
+        }
+
+        function showFactForSelectedDate() {
+            const inputDate = document.getElementById('dateInput').valueAsDate;
+            if (inputDate) {
+                showFactForDate(inputDate);
+            }
+        }
+
+        // Initialize with today's fact
+        window.onload = function() {
+            showTodaysFact();
+        };
+    </script>
+</body>
+</html>
