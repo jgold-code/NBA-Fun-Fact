@@ -82,6 +82,40 @@
             margin-top: 30px;
         }
 
+        .favorites-section {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .favorites-title {
+            font-size: 1.2rem;
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .favorite-icon {
+            display: inline-block;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+
+        .favorite-icon:hover {
+            transform: scale(1.2);
+        }
+
+        .favorite-icon.active {
+            color: #ffd700;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
         button {
             background: linear-gradient(45deg, #ff6b35, #f7931e);
             color: white;
@@ -149,16 +183,28 @@
         
         <div class="fact-container">
             <p class="fact-text" id="factText">Loading your NBA fact...</p>
+            <span class="favorite-icon" id="favoriteIcon" onclick="toggleFavorite()" title="Add to favorites">☆</span>
         </div>
         
         <div class="controls">
             <button onclick="showTodaysFact()">Today's Fact</button>
             <button onclick="getRandomFact()">Random Fact</button>
+            <button onclick="shareFact()">Share Fact</button>
             <input type="date" class="date-input" id="dateInput" onchange="showFactForSelectedDate()">
         </div>
+        
+        <div class="favorites-section" id="favoritesSection" style="display: none;">
+            <div class="favorites-title">⭐ Your Favorite Facts</div>
+            <div id="favoritesList"></div>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
     </div>
 
     <script>
+        // Current date key being displayed
+        let currentDateKey = '';
+        
         // NBA Historical Facts Database
         const nbaFacts = {
             "1-1": "On January 1, 1947, the Toronto Huskies hosted the New York Knicks in the first game ever played in the Basketball Association of America (BAA), which later became the NBA.",
@@ -234,45 +280,253 @@
         }
 
         function showFactForDate(date = new Date()) {
-            const dateKey = getDateKey(date);
-            const fact = nbaFacts[dateKey];
-            
-            document.getElementById('currentDate').textContent = formatDate(date);
-            
-            if (fact) {
-                document.getElementById('factText').textContent = fact;
-            } else {
-                document.getElementById('factText').textContent = 
-                    `On ${formatDate(date)}, while no major NBA event is recorded in our database, remember that every day in basketball history has contributed to the beautiful game we love today! 🏀`;
+            try {
+                const dateKey = getDateKey(date);
+                const fact = nbaFacts[dateKey];
+                
+                currentDateKey = dateKey;
+                document.getElementById('currentDate').textContent = formatDate(date);
+                
+                if (fact) {
+                    document.getElementById('factText').textContent = fact;
+                } else {
+                    document.getElementById('factText').textContent = 
+                        `On ${formatDate(date)}, while no major NBA event is recorded in our database, remember that every day in basketball history has contributed to the beautiful game we love today! 🏀`;
+                }
+                
+                updateFavoriteIcon();
+                clearError();
+            } catch (error) {
+                showError('Error displaying fact. Please try again.');
+                console.error('Error in showFactForDate:', error);
             }
         }
 
         function showTodaysFact() {
-            const today = new Date();
-            showFactForDate(today);
-            document.getElementById('dateInput').valueAsDate = today;
+            try {
+                const today = new Date();
+                showFactForDate(today);
+                // Set date input value using local date string to avoid timezone issues
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                document.getElementById('dateInput').value = `${year}-${month}-${day}`;
+            } catch (error) {
+                showError('Error loading today\'s fact.');
+                console.error('Error in showTodaysFact:', error);
+            }
         }
 
         function getRandomFact() {
-            const factKeys = Object.keys(nbaFacts);
-            const randomKey = factKeys[Math.floor(Math.random() * factKeys.length)];
-            const [month, day] = randomKey.split('-').map(Number);
-            const randomDate = new Date(2024, month - 1, day); // Using 2024 as base year
-            
-            showFactForDate(randomDate);
-            document.getElementById('dateInput').valueAsDate = randomDate;
+            try {
+                const factKeys = Object.keys(nbaFacts);
+                const randomKey = factKeys[Math.floor(Math.random() * factKeys.length)];
+                const [month, day] = randomKey.split('-').map(Number);
+                const randomDate = new Date(2024, month - 1, day); // Using 2024 as base year
+                
+                showFactForDate(randomDate);
+                // Set date input value using local date string to avoid timezone issues
+                const year = randomDate.getFullYear();
+                const monthStr = String(randomDate.getMonth() + 1).padStart(2, '0');
+                const dayStr = String(randomDate.getDate()).padStart(2, '0');
+                document.getElementById('dateInput').value = `${year}-${monthStr}-${dayStr}`;
+            } catch (error) {
+                showError('Error loading random fact.');
+                console.error('Error in getRandomFact:', error);
+            }
         }
 
         function showFactForSelectedDate() {
-            const inputDate = document.getElementById('dateInput').valueAsDate;
-            if (inputDate) {
-                showFactForDate(inputDate);
+            try {
+                const dateInput = document.getElementById('dateInput');
+                const dateValue = dateInput.value;
+                
+                if (dateValue) {
+                    // Parse the date string directly to avoid timezone issues
+                    const [year, month, day] = dateValue.split('-').map(Number);
+                    const selectedDate = new Date(year, month - 1, day);
+                    showFactForDate(selectedDate);
+                }
+            } catch (error) {
+                showError('Error loading fact for selected date.');
+                console.error('Error in showFactForSelectedDate:', error);
             }
+        }
+        
+        // Favorites functionality
+        function getFavorites() {
+            try {
+                const favorites = localStorage.getItem('nbaFavorites');
+                return favorites ? JSON.parse(favorites) : {};
+            } catch (error) {
+                console.error('Error reading favorites:', error);
+                return {};
+            }
+        }
+        
+        function saveFavorites(favorites) {
+            try {
+                localStorage.setItem('nbaFavorites', JSON.stringify(favorites));
+            } catch (error) {
+                console.error('Error saving favorites:', error);
+                showError('Could not save favorite.');
+            }
+        }
+        
+        function toggleFavorite() {
+            try {
+                const favorites = getFavorites();
+                const fact = nbaFacts[currentDateKey];
+                
+                if (!fact) {
+                    showError('Cannot favorite a date without a recorded NBA event.');
+                    return;
+                }
+                
+                if (favorites[currentDateKey]) {
+                    delete favorites[currentDateKey];
+                } else {
+                    favorites[currentDateKey] = {
+                        fact: fact,
+                        date: document.getElementById('currentDate').textContent
+                    };
+                }
+                
+                saveFavorites(favorites);
+                updateFavoriteIcon();
+                displayFavorites();
+            } catch (error) {
+                showError('Error toggling favorite.');
+                console.error('Error in toggleFavorite:', error);
+            }
+        }
+        
+        function updateFavoriteIcon() {
+            try {
+                const favorites = getFavorites();
+                const icon = document.getElementById('favoriteIcon');
+                
+                if (favorites[currentDateKey]) {
+                    icon.textContent = '★';
+                    icon.classList.add('active');
+                } else {
+                    icon.textContent = '☆';
+                    icon.classList.remove('active');
+                }
+            } catch (error) {
+                console.error('Error updating favorite icon:', error);
+            }
+        }
+        
+        function displayFavorites() {
+            try {
+                const favorites = getFavorites();
+                const favoritesSection = document.getElementById('favoritesSection');
+                const favoritesList = document.getElementById('favoritesList');
+                
+                if (Object.keys(favorites).length === 0) {
+                    favoritesSection.style.display = 'none';
+                    return;
+                }
+                
+                favoritesSection.style.display = 'block';
+                favoritesList.innerHTML = '';
+                
+                Object.keys(favorites).forEach(key => {
+                    const fav = favorites[key];
+                    const [month, day] = key.split('-').map(Number);
+                    const favDate = new Date(2024, month - 1, day);
+                    
+                    const favElement = document.createElement('div');
+                    favElement.style.cssText = 'background: rgba(255,255,255,0.05); border-radius: 10px; padding: 15px; margin: 10px 0; cursor: pointer; transition: all 0.3s ease;';
+                    favElement.innerHTML = `<strong>${formatDate(favDate).split(',').slice(0, 2).join(',')}</strong>`;
+                    
+                    favElement.onmouseover = () => favElement.style.background = 'rgba(255,255,255,0.1)';
+                    favElement.onmouseout = () => favElement.style.background = 'rgba(255,255,255,0.05)';
+                    favElement.onclick = () => {
+                        showFactForDate(favDate);
+                        const year = favDate.getFullYear();
+                        const monthStr = String(favDate.getMonth() + 1).padStart(2, '0');
+                        const dayStr = String(favDate.getDate()).padStart(2, '0');
+                        document.getElementById('dateInput').value = `${year}-${monthStr}-${dayStr}`;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    };
+                    
+                    favoritesList.appendChild(favElement);
+                });
+            } catch (error) {
+                console.error('Error displaying favorites:', error);
+            }
+        }
+        
+        // Share functionality
+        function shareFact() {
+            try {
+                const factText = document.getElementById('factText').textContent;
+                const dateText = document.getElementById('currentDate').textContent;
+                const shareText = `🏀 NBA History: ${dateText}\n\n${factText}\n\n#NBAHistory #Basketball`;
+                
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'NBA History - On This Day',
+                        text: shareText
+                    }).catch(err => {
+                        if (err.name !== 'AbortError') {
+                            copyToClipboard(shareText);
+                        }
+                    });
+                } else {
+                    copyToClipboard(shareText);
+                }
+            } catch (error) {
+                showError('Error sharing fact.');
+                console.error('Error in shareFact:', error);
+            }
+        }
+        
+        function copyToClipboard(text) {
+            try {
+                navigator.clipboard.writeText(text).then(() => {
+                    showError('Fact copied to clipboard!', false);
+                    setTimeout(clearError, 3000);
+                }).catch(() => {
+                    // Fallback for older browsers
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showError('Fact copied to clipboard!', false);
+                    setTimeout(clearError, 3000);
+                });
+            } catch (error) {
+                console.error('Error copying to clipboard:', error);
+            }
+        }
+        
+        // Error handling
+        function showError(message, isError = true) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = message;
+            errorElement.style.color = isError ? '#ff6b6b' : '#4ade80';
+        }
+        
+        function clearError() {
+            document.getElementById('errorMessage').textContent = '';
         }
 
         // Initialize with today's fact
         window.onload = function() {
-            showTodaysFact();
+            try {
+                showTodaysFact();
+                displayFavorites();
+            } catch (error) {
+                showError('Error initializing application.');
+                console.error('Error in window.onload:', error);
+            }
         };
     </script>
 </body>
