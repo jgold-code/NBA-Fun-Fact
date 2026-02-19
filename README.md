@@ -42,19 +42,33 @@ The app includes over 25 legendary NBA moments, including:
 
 ## 🛠️ Installation & Setup
 
-### Option 1: Direct Download
-1. Download or clone this repository
-2. Open `index.html` in your preferred web browser
-3. Start exploring NBA history!
-
-### Option 2: Local Server (Optional)
+### Option 1: Clone the Repository Locally
 ```bash
-# If you prefer running on a local server
+# Clone via HTTPS
+git clone https://github.com/jgold-code/NBA-Fun-Fact.git
+
+# Or clone via SSH
+git clone git@github.com:jgold-code/NBA-Fun-Fact.git
+
+# Navigate into the project directory
+cd NBA-Fun-Fact
+```
+Then open `index.html` in your preferred web browser and start exploring NBA history!
+
+### Option 2: Direct Download
+1. Click the green **Code** button on GitHub and select **Download ZIP**
+2. Extract the ZIP file
+3. Open `index.html` in your browser
+
+### Option 3: Local Server (Optional)
+If you prefer running on a local development server:
+```bash
+# Using Python
 python -m http.server 8000
-# OR
+
+# Or using Node.js
 npx serve .
 ```
-
 Then navigate to `http://localhost:8000`
 
 ## 📱 Browser Compatibility
